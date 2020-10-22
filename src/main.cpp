@@ -4,8 +4,9 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
-#include <fstream>
 
+#include <fstream>
+#include <Shader.h>
 const int windowWidth = 800;
 const int windowHeight = 600;
 

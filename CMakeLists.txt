@@ -2,6 +2,14 @@ cmake_minimum_required(VERSION 3.17)
 set(PROJECT_NAME project_base)
 project(${PROJECT_NAME})
 
+function(watch)
+    set_property(
+            DIRECTORY
+            APPEND
+            PROPERTY CMAKE_CONFIGURE_DEPENDS ${ARGV}
+    )
+endfunction()
+
 set(CMAKE_POLICY_DEFAULT_CMP0012 NEW)
 set(CMAKE_CXX_STANDARD 14)
 
@@ -30,5 +38,6 @@ file(GLOB SHADERS "shaders/*.vs"
         "shaders/*.fs")
 foreach(SHADER ${SHADERS})
     file(COPY ${SHADER} DESTINATION ${CMAKE_SOURCE_DIR}/bin/${PROJECT_NAME}/shaders)
+    watch(${SHADER})
 endforeach()
 
