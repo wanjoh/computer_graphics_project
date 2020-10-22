@@ -2,8 +2,7 @@ cmake_minimum_required(VERSION 3.17)
 set(PROJECT_NAME project_base)
 project(${PROJECT_NAME})
 
-
-
+set(CMAKE_POLICY_DEFAULT_CMP0012 NEW)
 set(CMAKE_CXX_STANDARD 14)
 
 list(APPEND CMAKE_CXX_FLAGS "-Wall -Wextra")
@@ -14,6 +13,7 @@ file(GLOB HEADERS "include/*.h" "include/*.hpp")
 find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(ASSIMP REQUIRED)
+
 add_subdirectory(libs/glad)
 add_definitions(${OPENGL_DEFINITIONS})
 
