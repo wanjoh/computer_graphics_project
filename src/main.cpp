@@ -6,8 +6,8 @@
 #include <iostream>
 
 #include <fstream>
-#include <Shader.h>
-#include <Error.h>
+#include <rg/Shader.h>
+#include <rg/Error.h>
 const int windowWidth = 800;
 const int windowHeight = 600;
 

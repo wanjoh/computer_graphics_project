@@ -6,7 +6,7 @@
 #define PROJECT_BASE_SHADER_H
 
 #include <fstream> // Because we need compile-time breaks :)
-#include <Error.h>
+#include <rg/Error.h>
 #include <sstream>
 
 struct ShaderFailedToCompileError : public std::exception {
