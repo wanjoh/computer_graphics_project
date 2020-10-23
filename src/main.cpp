@@ -7,6 +7,7 @@
 
 #include <fstream>
 #include <Shader.h>
+#include <Error.h>
 const int windowWidth = 800;
 const int windowHeight = 600;
 
@@ -41,7 +42,7 @@ int main() {
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         glClearColor(0.3f, 0.2f, 0.5f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        GLCALL(glClear(GL_COLOR_BUFFER_BIT));
 
         glfwSwapBuffers(window);
     }

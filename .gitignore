@@ -2,6 +2,8 @@
 # Created by https://www.toptal.com/developers/gitignore/api/c++,cmake,clion,clion+all,clion+iml,c
 # Edit at https://www.toptal.com/developers/gitignore?templates=c++,cmake,clion,clion+all,clion+iml,c
 
+project_base
+
 ### bin ###
 bin/
 

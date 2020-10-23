@@ -8,13 +8,12 @@
 #include <iostream>
 #include <glad/glad.h>
 
-namespace rg {
-    
-    
 #define BREAK_IF_FALSE(x) if (!(x)) __builtin_trap()
 #define ASSERT(x, msg) do { std::cerr << msg << '\n'; BREAK_IF_FALSE(false); } while(0)
 #define GLCALL(x) \
-do { clearAllErrors; x; BREAK_IF_FALSE(wasPreviousOpenGLCallSuccessful(__FILE__, __LINE__, #x)); } while (0)
+do{ rg::clearAllOpenGlErrors(); x; BREAK_IF_FALSE(rg::wasPreviousOpenGLCallSuccessful(__FILE__, __LINE__, #x)); } while (0)
+
+namespace rg {
 
     
 void clearAllOpenGlErrors();
