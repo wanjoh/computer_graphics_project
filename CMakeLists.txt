@@ -25,7 +25,8 @@ find_package(ASSIMP REQUIRED)
 add_subdirectory(libs/glad)
 add_definitions(${OPENGL_DEFINITIONS})
 
-set(LIBS glfw glad OpenGL::GL X11 Xrandr Xinerama Xi Xxf86vm Xcursor dl pthread freetype ${ASSIMP_LIBRARY})
+add_library(STB_IMAGE libs/stb_image.cpp)
+set(LIBS glfw glad OpenGL::GL X11 Xrandr Xinerama Xi Xxf86vm Xcursor dl pthread freetype ${ASSIMP_LIBRARY} STB_IMAGE)
 
 
 include_directories(include/)
