@@ -15,7 +15,7 @@ set(CMAKE_CXX_STANDARD 14)
 
 list(APPEND CMAKE_CXX_FLAGS "-Wall -Wextra")
 
-file(GLOB SOURCES "src/*.cpp" "src/*.c")
+file(GLOB SOURCES "src/*.cpp" "src/*.c" main.cpp)
 file(GLOB HEADERS "include/*.h" "include/*.hpp")
 
 find_package(OpenGL REQUIRED)
@@ -27,6 +27,11 @@ add_definitions(${OPENGL_DEFINITIONS})
 
 add_library(STB_IMAGE libs/stb_image.cpp)
 set(LIBS glfw glad OpenGL::GL X11 Xrandr Xinerama Xi Xxf86vm Xcursor dl pthread freetype ${ASSIMP_LIBRARY} STB_IMAGE)
+
+
+
+configure_file(configuration/root_directory.h.in configuration/root_directory.h)
+include_directories(${CMAKE_BINARY_DIR}/configuration)
 
 
 include_directories(include/)
