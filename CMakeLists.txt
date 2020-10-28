@@ -15,7 +15,7 @@ set(CMAKE_CXX_STANDARD 14)
 
 list(APPEND CMAKE_CXX_FLAGS "-Wall -Wextra")
 
-file(GLOB SOURCES "src/*.cpp" "src/*.c" main.cpp)
+file(GLOB SOURCES "src/*.cpp" "src/*.c" src/main.cpp)
 file(GLOB HEADERS "include/*.h" "include/*.hpp")
 
 find_package(OpenGL REQUIRED)
