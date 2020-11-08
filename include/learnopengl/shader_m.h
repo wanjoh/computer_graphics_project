@@ -8,7 +8,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
-
+#include <common.h>
 class Shader
 {
 public:
@@ -17,6 +17,13 @@ public:
     // ------------------------------------------------------------------------
     Shader(const char* vertexPath, const char* fragmentPath)
     {
+        std::string vertexPathString(vertexPath);
+        std::string fragmentPathString(fragmentPath);
+        appendShaderFolderIfNotPresent(vertexPathString);
+        appendShaderFolderIfNotPresent(fragmentPathString);
+        vertexPath = vertexPathString.c_str();
+        fragmentPath= fragmentPathString.c_str();
+
         // 1. retrieve the vertex/fragment source code from filePath
         std::string vertexCode;
         std::string fragmentCode;
