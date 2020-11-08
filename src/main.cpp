@@ -215,7 +215,6 @@ int main()
     ourShader.setInt("texture1", 0);
     ourShader.setInt("texture2", 1);
 
-
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
