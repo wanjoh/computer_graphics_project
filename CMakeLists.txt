@@ -29,7 +29,6 @@ add_library(STB_IMAGE libs/stb_image.cpp)
 set(LIBS glfw glad OpenGL::GL X11 Xrandr Xinerama Xi Xxf86vm Xcursor dl pthread freetype ${ASSIMP_LIBRARY} STB_IMAGE)
 
 
-
 configure_file(configuration/root_directory.h.in configuration/root_directory.h)
 include_directories(${CMAKE_BINARY_DIR}/configuration)
 
