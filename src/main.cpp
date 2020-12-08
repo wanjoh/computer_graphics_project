@@ -106,9 +106,7 @@ int main()
     pointLight.quadratic = 0.032f;
     pointLight.position = glm::vec3(4.0, 4.0, 4.0);
 
-    for (auto& textures : ourModel.textures_loaded) {
-        LOG(std::cerr) << textures.path << ' ' << textures.type << '\n';
-    }
+
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
