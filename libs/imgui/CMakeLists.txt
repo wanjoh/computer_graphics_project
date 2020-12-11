@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.17)
+cmake_minimum_required(VERSION 3.11)
 
 file(GLOB IMGUI_HEADERS "include/*.h")
 file(GLOB IMGUI_SOURCES "src/*.cpp")

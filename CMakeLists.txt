@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.17)
+cmake_minimum_required(VERSION 3.11)
 set(PROJECT_NAME project_base)
 project(${PROJECT_NAME})
 
@@ -13,9 +13,7 @@ endfunction()
 set(CMAKE_POLICY_DEFAULT_CMP0012 NEW)
 set(CMAKE_CXX_STANDARD 14)
 
-list(APPEND CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-unused-variable -Wno-unused-parameter")
-
-
+list(APPEND CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-unused-variable -Wno-unused-parameter -O3")
 
 file(GLOB SOURCES "src/*.cpp" "src/*.c" src/main.cpp)
 file(GLOB HEADERS "include/*.h" "include/*.hpp")
@@ -35,7 +33,7 @@ set_source_files_properties(libs/stb_image.cpp include/stb_image.h
         COMPILE_FLAGS
         "-Wno-shift-negative-value -Wno-implicit-fallthrough")
 
-set(LIBS glfw glad OpenGL::GL X11 Xrandr Xinerama Xi Xxf86vm Xcursor dl pthread freetype ${ASSIMP_LIBRARY} STB_IMAGE imgui)
+set(LIBS glfw glad OpenGL::GL X11 Xrandr Xinerama Xi Xxf86vm Xcursor dl pthread freetype ${ASSIMP_LIBRARIES} STB_IMAGE imgui)
 
 
 configure_file(configuration/root_directory.h.in configuration/root_directory.h)
