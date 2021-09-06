@@ -126,7 +126,7 @@ private:
             bool skip = false;
 
             for (unsigned int j = 0; j < loaded_textures.size(); ++j) {
-                if (std::strcmp(str.C_Str(), loaded_textures[i].path.c_str()) == 0) {
+                if (std::strcmp(str.C_Str(), loaded_textures[j].path.c_str()) == 0) {
                     textures.push_back(loaded_textures[j]);
                     skip = true;
                     break;
