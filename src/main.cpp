@@ -52,15 +52,19 @@ struct PointLight {
 };
 
 struct ProgramState {
-    glm::vec3 clearColor = glm::vec3(0.27f, 0.56f, 0.89f);
+    glm::vec3 clearColor = glm::vec3(0.5f, 0.25f, 0.25f);
     bool ImGuiEnabled = false;
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
-    glm::vec3 backpackPosition = glm::vec3(0.0f);
-    float backpackScale = 1.0f;
+    glm::vec3 carPosition = glm::vec3(0.0f);
+    float carScale = 0.5f;
+    // sun consts
+    float sunScale = 0.5f;
+    glm::vec3 sunPosition = glm::vec3(0.0f, 0.0f, -10.0f);
+    glm::vec3 sunColor = glm::vec3(0.977f, 0.367f, 0.325f);
     PointLight pointLight;
     ProgramState()
-            : camera(glm::vec3(0.0f, 0.0f, 3.0f)) {}
+            : camera(glm::vec3(0.0f, 0.5f, 3.0f)) {}
 
     void SaveToFile(std::string filename);
 
@@ -72,10 +76,10 @@ void ProgramState::SaveToFile(std::string filename) {
 //    out << clearColor.r << '\n'
 //        << clearColor.g << '\n'
 //        << clearColor.b << '\n'
+//        << camera.Position.x << '\n'
+//        << camera.Position.y << '\n'
+//        << camera.Position.z << '\n'
     out << ImGuiEnabled << '\n'
-        << camera.Position.x << '\n'
-        << camera.Position.y << '\n'
-        << camera.Position.z << '\n'
         << camera.Front.x << '\n'
         << camera.Front.y << '\n'
         << camera.Front.z << '\n';
@@ -87,10 +91,10 @@ void ProgramState::LoadFromFile(std::string filename) {
 //        in >> clearColor.r
 //           >> clearColor.g
 //           >> clearColor.b
+//        >> camera.Position.x
+//        >> camera.Position.y
+//        >> camera.Position.z
         in >> ImGuiEnabled
-           >> camera.Position.x
-           >> camera.Position.y
-           >> camera.Position.z
            >> camera.Front.x
            >> camera.Front.y
            >> camera.Front.z;
@@ -115,7 +119,7 @@ int main() {
 
     // glfw window creation
     // --------------------
-    GLFWwindow *window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "projekat", NULL, NULL);
     if (window == NULL) {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
@@ -137,7 +141,7 @@ int main() {
     }
 
     // tell stb_image.h to flip loaded texture's on the y-axis (before loading model).
-    stbi_set_flip_vertically_on_load(true);
+//    stbi_set_flip_vertically_on_load(true);
 
     programState = new ProgramState;
     programState->LoadFromFile("resources/program_state.txt");
@@ -160,30 +164,68 @@ int main() {
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
+//    glDepthFunc(GL_LESS);
 
     // build and compile shaders
     // -------------------------
-    Shader ourShader("resources/shaders/model_lighting.vs", "resources/shaders/model_lighting.fs");
+    Shader carShader("resources/shaders/model_lighting.vs", "resources/shaders/model_lighting.fs");
+    Shader sunShader("resources/shaders/sun_shader.vs", "resources/shaders/sun_shader.fs");
+
 
     // load models
     // -----------
-    Model ourModel("resources/objects/squidward/sq_lp.obj");
-    ourModel.SetShaderTextureNamePrefix("material.");
+    Model car("resources/objects/dodge-charger-1969-obj/source/K1AGJVQ50VCSD2UOPBS13FD0S_obj/K1AGJVQ50VCSD2UOPBS13FD0S.obj");
+    car.SetShaderTextureNamePrefix("material.");
+    Model sun("resources/objects/moon-obj/source/Moon.obj");
+    sun.SetShaderTextureNamePrefix("material.");
 
+    // set light
     PointLight& pointLight = programState->pointLight;
-    pointLight.position = glm::vec3(4.0f, 4.0, 0.0);
-    pointLight.ambient = glm::vec3(0.5, 0.5, 0.5);
-    pointLight.diffuse = glm::vec3(0.6, 0.6, 0.6);
-    pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
+    pointLight.position = glm::vec3(programState->sunPosition);
+    pointLight.ambient = glm::vec3(1.0, 0.5, 0.5);
+    pointLight.diffuse = programState->sunColor;// glm::vec3(0.6, 0.6, 0.6);
+    pointLight.specular = glm::vec3(1.0, 0.0, 0.0);// programState->sunColor; //glm::vec3(1.0, 1.0, 1.0);
 
     pointLight.constant = 1.0f;
-    pointLight.linear = 0.09f;
-    pointLight.quadratic = 0.032f;
+    pointLight.linear = 0.0f;
+    pointLight.quadratic = 0.0f;
 
 
 
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    // set constant uniform variables
+    // sun
+    sunShader.use();
+    sunShader.setVec3("sunColor_u", programState->sunColor);
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, programState->sunPosition);
+    // model = glm::rotate(model, glm::radians(0.0f), glm::vec3(0,1,0));
+    // make it smaller instead of placing it far away
+    model = glm::scale(model, glm::vec3(programState->sunScale));
+    sunShader.setMat4("model", model);
+
+
+    // car
+    carShader.use();
+    carShader.setVec3("sunPointLight.position", pointLight.position);
+    carShader.setVec3("sunPointLight.ambient", pointLight.ambient);
+    carShader.setVec3("sunPointLight.diffuse", pointLight.diffuse);
+    carShader.setVec3("sunPointLight.specular", pointLight.specular);
+    carShader.setFloat("sunPointLight.constant", pointLight.constant);
+    carShader.setFloat("sunPointLight.linear", pointLight.linear);
+    carShader.setFloat("sunPointLight.quadratic", pointLight.quadratic);
+    carShader.setFloat("material.shininess", 32.0f);
+
+    model = glm::mat4(1.0f);
+    model = glm::translate(model,programState->carPosition);
+    model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0.0, 1.0, 0.0));
+    model = glm::scale(model, glm::vec3(programState->carScale));
+
+
+//    model = glm::scale(model, glm::vec3(programState->carScale));
+    carShader.setMat4("model", model);
 
     // render loop
     // -----------
@@ -204,32 +246,48 @@ int main() {
         glClearColor(programState->clearColor.r, programState->clearColor.g, programState->clearColor.b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+//        sunShader.use();
+//        sunShader.setVec3("sunColor_u", programState->sunColor);
+//        glm::mat4 model = glm::mat4(1.0f);
+//        model = glm::translate(model, programState->sunPosition);
+//        // model = glm::rotate(model, glm::radians(0.0f), glm::vec3(0,1,0));
+//        // make it smaller instead of placing it far away
+//        model = glm::scale(model, glm::vec3(programState->sunScale));
+//        sunShader.setMat4("model", model);
+
         // don't forget to enable shader before setting uniforms
-        ourShader.use();
-        pointLight.position = glm::vec3(4.0 * cos(currentFrame), 4.0f, 4.0 * sin(currentFrame));
-        ourShader.setVec3("pointLight.position", pointLight.position);
-        ourShader.setVec3("pointLight.ambient", pointLight.ambient);
-        ourShader.setVec3("pointLight.diffuse", pointLight.diffuse);
-        ourShader.setVec3("pointLight.specular", pointLight.specular);
-        ourShader.setFloat("pointLight.constant", pointLight.constant);
-        ourShader.setFloat("pointLight.linear", pointLight.linear);
-        ourShader.setFloat("pointLight.quadratic", pointLight.quadratic);
-        ourShader.setVec3("viewPosition", programState->camera.Position);
-        ourShader.setFloat("material.shininess", 32.0f);
+        carShader.use();
+        carShader.setVec3("viewPosition", programState->camera.Position);
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
                                                 (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = programState->camera.GetViewMatrix();
-        ourShader.setMat4("projection", projection);
-        ourShader.setMat4("view", view);
+        carShader.setMat4("projection", projection);
+        carShader.setMat4("view", view);
 
-        // render the loaded model
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model,
-                               programState->backpackPosition); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(programState->backpackScale));    // it's a bit too big for our scene, so scale it down
-        ourShader.setMat4("model", model);
-        ourModel.Draw(ourShader);
+        // render car
+
+//        model = glm::mat4(1.0f);
+//        model = glm::translate(model,programState->carPosition);
+//        model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0, 1.0, 0.0));
+//        model = glm::scale(model, glm::vec3(programState->carScale));
+//        carShader.setMat4("model", model);
+        car.Draw(carShader);
+
+        /* template for a new object
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(programState->tempPosition));
+        model = glm::rotate(model, glm::radians(programState->tempRotation), glm::vec3(0,1,0));
+        model = glm::scale(model, glm::vec3(programState->tempScale));
+        objShader.setMat4("model", model);
+        x.Draw(objShader);
+        */
+
+        // draw sun
+        sunShader.use();
+        sunShader.setMat4("projection", projection);
+        sunShader.setMat4("view", view);
+        sun.Draw(sunShader);
 
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
@@ -309,14 +367,15 @@ void DrawImGui(ProgramState *programState) {
 
 
     {
-        static float f = 0.0f;
         ImGui::Begin("Model settings");
-        ImGui::SliderFloat("Float slider", &f, 0.0, 1.0);
 //        ImGui::ColorEdit3("Background color", (float *) &programState->clearColor);
 //        ImGui::Button("Reset background color");
-        ImGui::DragFloat3("Model position", (float*)&programState->backpackPosition);
-        ImGui::DragFloat("Model scale", &programState->backpackScale, 0.05, 0.1, 4.0);
-
+        ImGui::DragFloat3("Model position", (float*)&programState->carPosition);
+        ImGui::DragFloat("Model scale", &programState->carScale, 0.05, 0.1, 4.0);
+//        if (ImGui::Button("Reset camera position"))
+//        {
+//            &programState->camera.reset();
+//        }
         ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.quadratic", &programState->pointLight.quadratic, 0.05, 0.0, 1.0);
