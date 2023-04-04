@@ -33,8 +33,11 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 
 void main()
 {
+    vec4 texColor = texture(material.texture_specular1, TexCoords);
+    if (texColor.a < 1)
+        discard;
     vec3 normal = normalize(Normal);
-    vec3 viewDir = normalize(-viewPosition + FragPos);
+    vec3 viewDir = normalize(viewPosition - FragPos);
     vec3 result = CalcPointLight(sunPointLight, normal, FragPos, viewDir);
     FragColor = vec4(result, 1.0);
 }
@@ -57,5 +60,5 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     ambient *= attenuation;
     diffuse *= attenuation;
     specular *= attenuation;
-    return (0.2*ambient + 0.5*diffuse + specular);
+    return (0.2*ambient + diffuse + specular);
 }

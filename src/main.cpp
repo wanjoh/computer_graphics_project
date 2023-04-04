@@ -26,6 +26,7 @@ void processInput(GLFWwindow *window);
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
 
+unsigned int loadCubemap(vector<std::string> faces);
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
@@ -60,7 +61,7 @@ struct ProgramState {
     float carScale = 0.5f;
     // sun consts
     float sunScale = 0.5f;
-    glm::vec3 sunPosition = glm::vec3(0.0f, 0.0f, -10.0f);
+    glm::vec3 sunPosition = glm::vec3(0.0f, 2.0f, -10.0f);
     glm::vec3 sunColor = glm::vec3(0.977f, 0.367f, 0.325f);
     PointLight pointLight;
     ProgramState()
@@ -157,24 +158,92 @@ int main() {
     (void) io;
 
 
-
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330 core");
 
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
-//    glDepthFunc(GL_LESS);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    float skyboxVertices[] = {
+            // positions
+            -1.0f,  1.0f, -1.0f,
+            -1.0f, -1.0f, -1.0f,
+            1.0f, -1.0f, -1.0f,
+            1.0f, -1.0f, -1.0f,
+            1.0f,  1.0f, -1.0f,
+            -1.0f,  1.0f, -1.0f,
+
+            -1.0f, -1.0f,  1.0f,
+            -1.0f, -1.0f, -1.0f,
+            -1.0f,  1.0f, -1.0f,
+            -1.0f,  1.0f, -1.0f,
+            -1.0f,  1.0f,  1.0f,
+            -1.0f, -1.0f,  1.0f,
+
+            1.0f, -1.0f, -1.0f,
+            1.0f, -1.0f,  1.0f,
+            1.0f,  1.0f,  1.0f,
+            1.0f,  1.0f,  1.0f,
+            1.0f,  1.0f, -1.0f,
+            1.0f, -1.0f, -1.0f,
+
+            -1.0f, -1.0f,  1.0f,
+            -1.0f,  1.0f,  1.0f,
+            1.0f,  1.0f,  1.0f,
+            1.0f,  1.0f,  1.0f,
+            1.0f, -1.0f,  1.0f,
+            -1.0f, -1.0f,  1.0f,
+
+            -1.0f,  1.0f, -1.0f,
+            1.0f,  1.0f, -1.0f,
+            1.0f,  1.0f,  1.0f,
+            1.0f,  1.0f,  1.0f,
+            -1.0f,  1.0f,  1.0f,
+            -1.0f,  1.0f, -1.0f,
+
+            -1.0f, -1.0f, -1.0f,
+            -1.0f, -1.0f,  1.0f,
+            1.0f, -1.0f, -1.0f,
+            1.0f, -1.0f, -1.0f,
+            -1.0f, -1.0f,  1.0f,
+            1.0f, -1.0f,  1.0f
+    };
+
+    // skybox VAO
+    unsigned int skyboxVAO, skyboxVBO;
+    glGenVertexArrays(1, &skyboxVAO);
+    glGenBuffers(1, &skyboxVBO);
+    glBindVertexArray(skyboxVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+    // load textures
+    vector<std::string> faces {
+            FileSystem::getPath("resources/textures/skybox/front.png"),
+            FileSystem::getPath("resources/textures/skybox/back.png"),
+            FileSystem::getPath("resources/textures/skybox/top.png"),
+            FileSystem::getPath("resources/textures/skybox/bottom.png"),
+            FileSystem::getPath("resources/textures/skybox/right.png"),
+            FileSystem::getPath("resources/textures/skybox/left.png"),
+
+    };
+    unsigned int cubemapTexture = loadCubemap(faces);
 
     // build and compile shaders
     // -------------------------
     Shader carShader("resources/shaders/model_lighting.vs", "resources/shaders/model_lighting.fs");
     Shader sunShader("resources/shaders/sun_shader.vs", "resources/shaders/sun_shader.fs");
+    Shader skyboxShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
 
 
     // load models
     // -----------
-    Model car("resources/objects/dodge-charger-1969-obj/source/K1AGJVQ50VCSD2UOPBS13FD0S_obj/K1AGJVQ50VCSD2UOPBS13FD0S.obj");
+    Model car("resources/objects/backpack/backpack.obj");
     car.SetShaderTextureNamePrefix("material.");
     Model sun("resources/objects/moon-obj/source/Moon.obj");
     sun.SetShaderTextureNamePrefix("material.");
@@ -182,12 +251,12 @@ int main() {
     // set light
     PointLight& pointLight = programState->pointLight;
     pointLight.position = glm::vec3(programState->sunPosition);
-    pointLight.ambient = glm::vec3(1.0, 0.5, 0.5);
+    pointLight.ambient = programState->sunColor;// glm::vec3(1.0, 0.5, 0.5);
     pointLight.diffuse = programState->sunColor;// glm::vec3(0.6, 0.6, 0.6);
     pointLight.specular = glm::vec3(1.0, 0.0, 0.0);// programState->sunColor; //glm::vec3(1.0, 1.0, 1.0);
 
     pointLight.constant = 1.0f;
-    pointLight.linear = 0.0f;
+    pointLight.linear = 0.08f;
     pointLight.quadratic = 0.0f;
 
 
@@ -195,37 +264,10 @@ int main() {
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-    // set constant uniform variables
-    // sun
-    sunShader.use();
-    sunShader.setVec3("sunColor_u", programState->sunColor);
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, programState->sunPosition);
-    // model = glm::rotate(model, glm::radians(0.0f), glm::vec3(0,1,0));
-    // make it smaller instead of placing it far away
-    model = glm::scale(model, glm::vec3(programState->sunScale));
-    sunShader.setMat4("model", model);
+    // shader configuration
+    skyboxShader.use();
+    skyboxShader.setInt("skybox", 0);
 
-
-    // car
-    carShader.use();
-    carShader.setVec3("sunPointLight.position", pointLight.position);
-    carShader.setVec3("sunPointLight.ambient", pointLight.ambient);
-    carShader.setVec3("sunPointLight.diffuse", pointLight.diffuse);
-    carShader.setVec3("sunPointLight.specular", pointLight.specular);
-    carShader.setFloat("sunPointLight.constant", pointLight.constant);
-    carShader.setFloat("sunPointLight.linear", pointLight.linear);
-    carShader.setFloat("sunPointLight.quadratic", pointLight.quadratic);
-    carShader.setFloat("material.shininess", 32.0f);
-
-    model = glm::mat4(1.0f);
-    model = glm::translate(model,programState->carPosition);
-    model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0.0, 1.0, 0.0));
-    model = glm::scale(model, glm::vec3(programState->carScale));
-
-
-//    model = glm::scale(model, glm::vec3(programState->carScale));
-    carShader.setMat4("model", model);
 
     // render loop
     // -----------
@@ -245,33 +287,50 @@ int main() {
         // ------
         glClearColor(programState->clearColor.r, programState->clearColor.g, programState->clearColor.b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-//        sunShader.use();
-//        sunShader.setVec3("sunColor_u", programState->sunColor);
-//        glm::mat4 model = glm::mat4(1.0f);
-//        model = glm::translate(model, programState->sunPosition);
-//        // model = glm::rotate(model, glm::radians(0.0f), glm::vec3(0,1,0));
-//        // make it smaller instead of placing it far away
-//        model = glm::scale(model, glm::vec3(programState->sunScale));
-//        sunShader.setMat4("model", model);
-
-        // don't forget to enable shader before setting uniforms
-        carShader.use();
-        carShader.setVec3("viewPosition", programState->camera.Position);
-        // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
                                                 (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = programState->camera.GetViewMatrix();
+
+        sunShader.use();
+        sunShader.setVec3("sunColor_u",programState->sunColor);
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, programState->sunPosition);
+        // make it smaller instead of placing it far away
+//        model = glm::scale(model, glm::vec3(programState->sunScale));
+        sunShader.setMat4("model", model);
+//        projection = glm::perspective(glm::radians(programState->camera.Zoom),
+//                                                (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
+//        view = programState->camera.GetViewMatrix();
+        sunShader.setMat4("projection", projection);
+        sunShader.setMat4("view", view);
+        sun.Draw(sunShader);
+
+
+        carShader.use();
+        carShader.setVec3("sunPointLight.position", pointLight.position);
+        carShader.setVec3("sunPointLight.ambient", pointLight.ambient);
+        carShader.setVec3("sunPointLight.diffuse", pointLight.diffuse);
+        carShader.setVec3("sunPointLight.specular", pointLight.specular);
+        carShader.setFloat("sunPointLight.constant", pointLight.constant);
+        carShader.setFloat("sunPointLight.linear", pointLight.linear);
+        carShader.setFloat("sunPointLight.quadratic", pointLight.quadratic);
+        carShader.setFloat("material.shininess", 32.0f);
+
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,programState->carPosition);
+//        model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0, 0.0, 0.0));
+        model = glm::scale(model, glm::vec3(programState->carScale));
+        carShader.setMat4("model", model);
+
+        carShader.setVec3("viewPosition", programState->camera.Position);
+        // view/projection transformations
+//        projection = glm::perspective(glm::radians(programState->camera.Zoom),
+//                                                (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
+//        view = programState->camera.GetViewMatrix();
         carShader.setMat4("projection", projection);
         carShader.setMat4("view", view);
 
         // render car
-
-//        model = glm::mat4(1.0f);
-//        model = glm::translate(model,programState->carPosition);
-//        model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0, 1.0, 0.0));
-//        model = glm::scale(model, glm::vec3(programState->carScale));
-//        carShader.setMat4("model", model);
         car.Draw(carShader);
 
         /* template for a new object
@@ -283,11 +342,19 @@ int main() {
         x.Draw(objShader);
         */
 
-        // draw sun
-        sunShader.use();
-        sunShader.setMat4("projection", projection);
-        sunShader.setMat4("view", view);
-        sun.Draw(sunShader);
+        // draw skybox as last
+        glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
+        skyboxShader.use();
+        view = glm::mat4(glm::mat3(programState->camera.GetViewMatrix())); // remove translation from the view matrix
+        skyboxShader.setMat4("view", view);
+        skyboxShader.setMat4("projection", projection);
+        // skybox cube
+        glBindVertexArray(skyboxVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glBindVertexArray(0);
+        glDepthFunc(GL_LESS); // set depth function back to default
 
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
@@ -407,4 +474,36 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         }
     }
+}
+
+unsigned int loadCubemap(vector<std::string> faces)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+    int width, height, nrChannels;
+    for (unsigned int i = 0; i < faces.size(); i++)
+    {
+        unsigned char *data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
+        if (data)
+        {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                         0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
+            );
+            stbi_image_free(data);
+        }
+        else
+        {
+            std::cout << "Cubemap tex failed to load at path: " << faces[i] << std::endl;
+            stbi_image_free(data);
+        }
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    return textureID;
 }
