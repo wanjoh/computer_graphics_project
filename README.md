@@ -4,19 +4,19 @@
 
 # Implemented checklist
 - [x] Shaders
-- [ ] Textures
+- [x] Textures
 - [x] Transformations
 - [x] Coordinate systems & Camera
-- [ ] Advanced lighting
-- [ ] Multiple lights
+- [x] Advanced lighting
+- [x] Multiple lights
 - [x] Model loading
 - [ ] Blending
-- [ ] Face culling
-- [ ] Imgui
-
+- [x] Face culling
+- [x] Imgui
+- [x] Geometry shader
 ### A
 - [ ] Frame buffers
-- [ ] Cubemaps
+- [x] Cubemaps
 - [ ] Instancing 
 - [ ] Anti Aliasing
 
@@ -29,5 +29,6 @@
 
 
 # Assets
-[Moon-Obj (used as a Sun model)](https://sketchfab.com/3d-models/moon-obj-f11708f1dd1f482abc22727a7eab40d4)
+[Moon-Obj (used as exploding ball)](https://sketchfab.com/3d-models/moon-obj-f11708f1dd1f482abc22727a7eab40d4)
 
+[Intergalactic spaceship](https://free3d.com/3d-model/intergalactic-spaceship-in-blender-28-eevee-394046.html)

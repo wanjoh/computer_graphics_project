@@ -8,7 +8,6 @@ out vec3 Normal;
 out vec3 FragPos;
 out vec3 sunColor;
 
-uniform vec3 sunColor_u;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
@@ -19,5 +18,5 @@ void main()
     Normal = aNormal;
     TexCoords = aTexCoords;
     gl_Position = projection * view * vec4(FragPos, 1.0);
-    sunColor = sunColor_u;
+    sunColor = vec3(1.0, 0.0, 0.0);
 }
