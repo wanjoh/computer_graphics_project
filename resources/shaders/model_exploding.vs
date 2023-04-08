@@ -4,6 +4,7 @@ layout (location = 2) in vec2 aTexCoords;
 
 out VS_OUT {
     vec2 texCoords;
+    vec3 aPos;
 } vs_out;
 
 uniform mat4 projection;

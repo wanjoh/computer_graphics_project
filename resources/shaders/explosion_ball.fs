@@ -5,9 +5,9 @@ out vec4 FragColor;
 in vec2 TexCoords;
 in vec3 Normal;
 in vec3 FragPos;
-in vec3 sunColor;
+in vec3 explosionColor;
 
 void main()
 {
-    FragColor = vec4(sunColor, 1.0);
+    FragColor = vec4(explosionColor, 1.0);
 }

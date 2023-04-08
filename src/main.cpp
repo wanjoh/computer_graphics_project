@@ -57,13 +57,21 @@ struct ProgramState {
     bool ImGuiEnabled = false;
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
-    glm::vec3 shipPosition = glm::vec3(0.0f);
+
+    // ship consts
     float shipScale = 0.3f;
-    // sun consts
+    glm::vec3 ship1Position = glm::vec3(-1.5, 0.0, -1.0);
+    glm::vec3 ship2Position = glm::vec3(1.5, 0.0, -1.0);
+
+    // explosion consts
     glm::vec3 explosionPosition = glm::vec3(0.0, 0.0, 5.0);
     glm::vec3 explosionColor = glm::vec3(1.0, 0.34, 0.08);
-    glm::vec3 sunPosition = glm::vec3(0.0,0.0, 100.0);
-//    glm::vec3 sunColor = glm::vec3(0.977f, 0.367f, 0.325f);
+
+    // bullet consts
+    float bulletScale = 0.05f;
+    int bulletCount = -1;
+
+    bool pause = false;
     PointLight pointLight;
     ProgramState()
             : camera(glm::vec3(0.0f, 2.0f, 10.0f)) {}
@@ -75,25 +83,15 @@ struct ProgramState {
 
 void ProgramState::SaveToFile(std::string filename) {
     std::ofstream out(filename);
-//    out << clearColor.r << '\n'
-//        << clearColor.g << '\n'
-//        << clearColor.b << '\n'
-//        << camera.Position.x << '\n'
-//        << camera.Position.y << '\n'
-//        << camera.Position.z << '\n'
-    out << ImGuiEnabled << '\n';
+    out << ImGuiEnabled << '\n'
+        << pause;
 }
 
 void ProgramState::LoadFromFile(std::string filename) {
     std::ifstream in(filename);
     if (in) {
-//        in >> clearColor.r
-//           >> clearColor.g
-//           >> clearColor.b
-//        >> camera.Position.x
-//        >> camera.Position.y
-//        >> camera.Position.z
-        in >> ImGuiEnabled;
+        in  >> ImGuiEnabled
+            >> pause;
     }
 }
 
@@ -146,6 +144,49 @@ float skyboxVertices[] = {
         1.0f, -1.0f,  1.0f
 };
 
+float cubeVertices[] = {
+        -0.5f, -0.5f, -0.5f,
+        0.5f, -0.5f, -0.5f,
+        0.5f,  0.5f, -0.5f,
+        0.5f,  0.5f, -0.5f,
+        -0.5f,  0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+
+        -0.5f, -0.5f,  0.5f,
+        0.5f, -0.5f,  0.5f,
+        0.5f,  0.5f,  0.5f,
+        0.5f,  0.5f,  0.5f,
+        -0.5f,  0.5f,  0.5f,
+        -0.5f, -0.5f,  0.5f,
+
+        -0.5f,  0.5f,  0.5f,
+        -0.5f,  0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f,  0.5f,
+        -0.5f,  0.5f,  0.5f,
+
+        0.5f,  0.5f,  0.5f,
+        0.5f,  0.5f, -0.5f,
+        0.5f, -0.5f, -0.5f,
+        0.5f, -0.5f, -0.5f,
+        0.5f, -0.5f,  0.5f,
+        0.5f,  0.5f,  0.5f,
+
+        -0.5f, -0.5f, -0.5f,
+        0.5f, -0.5f, -0.5f,
+        0.5f, -0.5f,  0.5f,
+        0.5f, -0.5f,  0.5f,
+        -0.5f, -0.5f,  0.5f,
+        -0.5f, -0.5f, -0.5f,
+
+        -0.5f,  0.5f, -0.5f,
+        0.5f,  0.5f, -0.5f,
+        0.5f,  0.5f,  0.5f,
+        0.5f,  0.5f,  0.5f,
+        -0.5f,  0.5f,  0.5f,
+        -0.5f,  0.5f, -0.5f
+};
 
 int main() {
     // glfw: initialize and configure
@@ -204,8 +245,16 @@ int main() {
 
     // configure global opengl state
     // -----------------------------
-    glEnable(GL_DEPTH_TEST);
+    glm::vec3 initialBulletPositions[] = {
+            programState->ship1Position,
+            programState->ship2Position,
+            glm::vec3(-1.0f, 0.0f, 1.0f),
+            glm::vec3(-0.5f, 0.0f, 3.0f),
+            glm::vec3(0.75f, 0.0f, 2.0f)
+    };
+    programState->bulletCount = sizeof(initialBulletPositions) / sizeof(glm::vec3);
 
+    glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -222,6 +271,17 @@ int main() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+    // bullet VAO
+    unsigned int VBO, VAO;
+    glGenVertexArrays(2, &VAO);
+    glGenBuffers(2, &VBO);
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
 
     // load textures
     vector<std::string> faces {
@@ -241,6 +301,7 @@ int main() {
     Shader explodingShipShader("resources/shaders/model_exploding.vs", "resources/shaders/model_exploding.fs", "resources/shaders/model_exploding.gs");
     Shader explosionBallShader("resources/shaders/explosion_ball.vs", "resources/shaders/explosion_ball.fs");
     Shader skyboxShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
+    Shader bulletShader("resources/shaders/bullet.vs", "resources/shaders/bullet.fs");
 
 
     // load models
@@ -257,9 +318,10 @@ int main() {
     skyboxShader.use();
     skyboxShader.setInt("skybox", 0);
 
+    explosionBallShader.use();
+    explosionBallShader.setVec3("explosionColor_u", programState->explosionColor);
+    explosionBallShader.setInt("skybox", 0);
 
-    // render loop
-    // -----------
     // set global "sunlight" parameters
     shipShader.use();
     shipShader.setVec3("dirLight.direction", glm::vec3(-0.2f, -1.0f, -0.3f));
@@ -272,12 +334,21 @@ int main() {
     shipShader.setVec3("explosionLight.position", programState->explosionPosition);
     shipShader.setVec3("explosionLight.ambient", programState->explosionColor);
     shipShader.setVec3("explosionLight.diffuse", programState->explosionColor);
-    shipShader.setVec3("explosionLight.specular", glm::vec3(1.0, 0.0, 0.0));
+    shipShader.setVec3("explosionLight.specular", programState->explosionColor);
     shipShader.setFloat("explosionLight.constant", 1.0f);
     shipShader.setFloat("explosionLight.linear", 0.09f);
     shipShader.setFloat("explosionLight.quadratic", 0.032f);
     shipShader.setFloat("material.shininess", 8.0f);
-    long long counter = 1;
+
+    // render loop
+    // -----------
+    float counter = 0.0f;
+    // delay between model disappearing and explosion "shrinking"
+    int disappearing_delay = 500;
+    // used to stop time incrementing when model has disappeared
+    float time_cap = 0.0f;
+    // used to discard fragments if it is <= 0
+    float transparency_cap = 1.0f;
     while (!glfwWindowShouldClose(window)) {
         // per-frame time logic
         // --------------------
@@ -301,45 +372,29 @@ int main() {
 
         glDisable(GL_CULL_FACE);
 
-        // exploding battleship
-        explodingShipShader.use();
-        glm::mat4 model = glm::mat4(1);
-        model = glm::translate(model, programState->explosionPosition);
-        model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0, 1.0, 0.0));
-        model = glm::scale(model, glm::vec3(programState->shipScale));
-        explodingShipShader.setMat4("model", model);
-        explodingShipShader.setMat4("view", view);
-        explodingShipShader.setMat4("projection", projection);
-        explodingShipShader.setFloat("time", 10);
-        ship.Draw(explodingShipShader);
-
         // explosion ball
         explosionBallShader.use();
-        model = glm::mat4(1.0f);
+        glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, programState->explosionPosition);
-//        model = glm::scale(model, glm::vec3(programState->sunScale));
+        model = glm::scale(model, glm::vec3(0.4 + 0.0001 * counter));
         explosionBallShader.setMat4("model", model);
-//        projection = glm::perspective(glm::radians(programState->camera.Zoom),
-//                                                (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
-//        view = programState->camera.GetViewMatrix();
         explosionBallShader.setMat4("projection", projection);
         explosionBallShader.setMat4("view", view);
         explosionBall.Draw(explosionBallShader);
-
 
         glEnable(GL_CULL_FACE);
 
         // attacking battleship #1
         shipShader.use();
+        shipShader.setVec3("explosionLight.intensity",  glm::vec3(0.001*max(counter, 0.0f)));
 
         model = glm::mat4(1.0f);
-        model = glm::translate(model,glm::vec3(-1.5, 0.0, -1.0));
+        model = glm::translate(model,programState->ship1Position);
         model = glm::rotate(model, glm::radians(20.0f), glm::vec3(0.0, 1.0, 0.0));
         model = glm::scale(model, glm::vec3(programState->shipScale));
         shipShader.setMat4("model", model);
 
         shipShader.setVec3("viewPosition", programState->camera.Position);
-        // view/projection transformations
         shipShader.setMat4("projection", projection);
         shipShader.setMat4("view", view);
 
@@ -347,22 +402,39 @@ int main() {
 
         // attacking battleship #2
         model = glm::mat4(1);
-        model = glm::translate(model, glm::vec3(1.5, 0.0, -1.0));
+        model = glm::translate(model, programState->ship2Position);
         model = glm::rotate(model, glm::radians(-20.0f), glm::vec3(0.0, 1.0, 0.0));
         model = glm::scale(model, glm::vec3(programState->shipScale));
         shipShader.setMat4("model", model);
         ship.Draw(shipShader);
 
 
-
         /* template for a new object
         model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(programState->tempPosition));
-        model = glm::rotate(model, glm::radians(programState->tempRotation), glm::vec3(0,1,0));
-        model = glm::scale(model, glm::vec3(programState->tempScale));
+        model = glm::translate(model, glm::vec3());
+        model = glm::rotate(model, glm::radians(), glm::vec3(0,1,0));
+        model = glm::scale(model, glm::vec3());
         objShader.setMat4("model", model);
         x.Draw(objShader);
         */
+        glDisable(GL_CULL_FACE);
+
+        // bullets
+        bulletShader.use();
+        bulletShader.setMat4("view", view);
+        bulletShader.setMat4("projection", projection);
+        glBindVertexArray(VAO);
+
+        for (int i = 0; i < programState->bulletCount; i++) {
+            if (counter >= 500 || transparency_cap <= 0)
+                continue;
+            model = glm::mat4(1);
+            model = glm::translate(model, initialBulletPositions[i] + (programState->explosionPosition-initialBulletPositions[i])*counter/500.0f);
+            model = glm::scale(model, glm::vec3(programState->bulletScale));
+            bulletShader.setMat4("model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
+
 
         // draw skybox as last
         glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
@@ -377,6 +449,40 @@ int main() {
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
         glDepthFunc(GL_LESS); // set depth function back to default
+
+        // exploding battleship
+        explodingShipShader.use();
+        model = glm::mat4(1);
+        model = glm::translate(model, programState->explosionPosition);
+        model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0, 1.0, 0.0));
+        model = glm::scale(model, glm::vec3(programState->shipScale));
+        explodingShipShader.setMat4("model", model);
+        view = programState->camera.GetViewMatrix();
+        explodingShipShader.setMat4("view", view);
+        explodingShipShader.setMat4("projection", projection);
+        explodingShipShader.setFloat("time", std::max(counter / 1000.0f, time_cap));
+        explodingShipShader.setFloat("transparency", min(transparency_cap, 3.0f - 1.0f*counter/1000.0f));
+        explodingShipShader.setVec3("cameraPos", programState->camera.Position);
+        ship.Draw(explodingShipShader);
+
+
+        // update counter and flags
+//        std::cout << counter << '\n';
+        // increment time counter
+        if (disappearing_delay > 0 && counter < 3000 && !programState->pause )
+            counter++;
+        // check if explosion is "finished"
+        if (disappearing_delay > 0 && counter >= 3000 && !programState->pause) {
+            time_cap = 3.0;
+            transparency_cap = -1.0;
+            disappearing_delay--;
+        }
+        // explosion "disappearance"
+        if (disappearing_delay == 0 && counter > -4000 && !programState->pause) {
+            counter--;
+            if (counter < 0)
+                counter -= 3;
+        }
 
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
@@ -414,6 +520,7 @@ void processInput(GLFWwindow *window) {
         programState->camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         programState->camera.ProcessKeyboard(RIGHT, deltaTime);
+
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -457,8 +564,7 @@ void DrawImGui(ProgramState *programState) {
 
     {
         ImGui::Begin("Model settings");
-        ImGui::DragFloat3("Model position", (float*)&programState->shipPosition);
-        ImGui::DragFloat("Model scale", &programState->shipScale, 0.05, 0.1, 4.0);
+//        ImGui::DragFloat("Model scale", &programState->shipScale, 0.05, 0.1, 4.0);
 //        if (ImGui::Button("Reset camera position"))
 //        {
 //            &programState->camera.reset();
@@ -493,6 +599,9 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
             programState->CameraMouseMovementUpdateEnabled = true;
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         }
+    }
+    if (key == GLFW_KEY_P && action == GLFW_PRESS) {
+        programState->pause = !programState->pause;
     }
 }
 
