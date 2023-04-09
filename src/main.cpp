@@ -72,6 +72,11 @@ struct ProgramState {
     int bulletCount = -1;
 
     bool pause = false;
+
+    float counter;
+    int animation_speed;
+    bool loop;
+
     PointLight pointLight;
     ProgramState()
             : camera(glm::vec3(0.0f, 2.0f, 10.0f)) {}
@@ -194,6 +199,7 @@ float cubeVertices[] = {
         -0.5f,  0.5f, -0.5f
 };
 
+// TODO: multiple ships; bloom
 int main() {
     // glfw: initialize and configure
     // ------------------------------
@@ -324,10 +330,6 @@ int main() {
     skyboxShader.use();
     skyboxShader.setInt("skybox", 0);
 
-    explosionBallShader.use();
-    explosionBallShader.setVec3("explosionColor_u", programState->explosionColor);
-    explosionBallShader.setInt("skybox", 0);
-
     // set global "sunlight" parameters
     shipShader.use();
     shipShader.setVec3("dirLight.direction", glm::vec3(-0.2f, -1.0f, -0.3f));
@@ -342,19 +344,38 @@ int main() {
     shipShader.setVec3("explosionLight.diffuse", programState->explosionColor);
     shipShader.setVec3("explosionLight.specular", programState->explosionColor);
     shipShader.setFloat("explosionLight.constant", 1.0f);
-    shipShader.setFloat("explosionLight.linear", 0.09f);
+    shipShader.setFloat("explosionLight.linear", 0.1f);
     shipShader.setFloat("explosionLight.quadratic", 0.032f);
     shipShader.setFloat("material.shininess", 8.0f);
 
+    explodingShipShader.use();
+    explodingShipShader.setVec3("dirLight.direction", glm::vec3(-0.2f, -1.0f, -0.3f));
+    explodingShipShader.setVec3("dirLight.ambient", glm::vec3(1.0));
+    explodingShipShader.setVec3("dirLight.diffuse", glm::vec3(1.0));
+    explodingShipShader.setVec3("dirLight.specular", glm::vec3(1.0));
+
+    explodingShipShader.setVec3("explosionLight.position", programState->explosionPosition);
+    explodingShipShader.setVec3("explosionLight.ambient", programState->explosionColor);
+    explodingShipShader.setVec3("explosionLight.diffuse", programState->explosionColor);
+    explodingShipShader.setVec3("explosionLight.specular", programState->explosionColor);
+    explodingShipShader.setFloat("explosionLight.constant", 1.0f);
+    explodingShipShader.setFloat("explosionLight.linear", 0.09f);
+    explodingShipShader.setFloat("explosionLight.quadratic", 0.032f);
+    explodingShipShader.setFloat("material.shininess", 8.0f);
+
     // render loop
     // -----------
-    float counter = 0.0f;
-    // delay between model disappearing and explosion "shrinking"
-    int disappearing_delay = 500;
+    // time counter; 0 - 3000 - explosion grows; >3000 explosion shrinks
+    programState->counter = 0.0f;
+    // delay before the animation starts
+    int delay_counter = 100;
     // used to stop time incrementing when model has disappeared
-    float time_cap = 0.0f;
     // used to discard fragments if it is <= 0
-    float transparency_cap = 1.0f;
+    float explosion_scale = 0;
+    float explosion_light_intensity = 0.0f;
+    programState->animation_speed = 4;
+    programState->loop = true;
+
     while (!glfwWindowShouldClose(window)) {
         // per-frame time logic
         // --------------------
@@ -374,6 +395,27 @@ int main() {
         glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
                                                 (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = programState->camera.GetViewMatrix();
+        glm::mat4 model = glm::mat4(1);
+
+        // explosion ball
+
+        explosion_scale = (programState->counter <= 3000) ?
+                0.0002f * programState->counter : 0.6f - 0.0002f * (programState->counter - 3000.0f);
+        explosion_scale = max(explosion_scale, 0.0f);
+        explosion_light_intensity = (explosion_scale <= 0 || programState->counter < 400.0f) ? 0 : 4*explosion_scale;
+
+        // counter == 3000: expl = 3, explosion_scale = 0.5
+
+        explosionBallShader.use();
+        explosionBallShader.setVec3("explosionColor_u", (explosion_scale + 0.5f) * programState->explosionColor);
+
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, programState->explosionPosition);
+        model = glm::scale(model, glm::vec3(explosion_scale));
+        explosionBallShader.setMat4("model", model);
+        explosionBallShader.setMat4("projection", projection);
+        explosionBallShader.setMat4("view", view);
+        explosionBall.Draw(explosionBallShader);
 
 
 
@@ -381,10 +423,11 @@ int main() {
         glCullFace(GL_BACK);
 
         // attacking battleship #1
-        shipShader.use();
-        shipShader.setVec3("explosionLight.intensity",  glm::vec3(0.001*max(counter, 0.0f)));
 
-        glm::mat4 model = glm::mat4(1.0f);
+        shipShader.use();
+        shipShader.setVec3("explosionLight.intensity",  glm::vec3(explosion_light_intensity));
+
+        model = glm::mat4(1.0f);
         model = glm::translate(model,programState->ship1Position);
         model = glm::rotate(model, glm::radians(20.0f), glm::vec3(0.0, 1.0, 0.0));
         model = glm::scale(model, glm::vec3(programState->shipScale));
@@ -414,7 +457,6 @@ int main() {
         x.Draw(objShader);
         */
 
-
         // bullets
         bulletShader.use();
         bulletShader.setMat4("view", view);
@@ -422,27 +464,18 @@ int main() {
         glBindVertexArray(VAO);
 
         for (int i = 0; i < programState->bulletCount; i++) {
-            if (counter >= 500 || transparency_cap <= 0)
+            glm::vec3 bulletPos = initialBulletPositions[i] + (programState->explosionPosition-initialBulletPositions[i])*programState->counter/500.0f;
+            if (bulletPos.z >= programState->explosionPosition.z)
                 continue;
             model = glm::mat4(1);
-            model = glm::translate(model, initialBulletPositions[i] + (programState->explosionPosition-initialBulletPositions[i])*counter/500.0f);
+            model = glm::translate(model, bulletPos);
             model = glm::scale(model, glm::vec3(programState->bulletScale));
             bulletShader.setMat4("model", model);
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
         glDisable(GL_CULL_FACE);
 
-        // explosion ball
-        explosionBallShader.use();
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, programState->explosionPosition);
-        model = glm::scale(model, glm::vec3(0.4 + 0.0001 * counter));
-        explosionBallShader.setMat4("model", model);
-        explosionBallShader.setMat4("projection", projection);
-        explosionBallShader.setMat4("view", view);
-        explosionBall.Draw(explosionBallShader);
-
-        // draw skybox as last
+        // draw skybox
         glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
         skyboxShader.use();
         view = glm::mat4(glm::mat3(programState->camera.GetViewMatrix())); // remove translation from the view matrix
@@ -457,38 +490,40 @@ int main() {
         glDepthFunc(GL_LESS); // set depth function back to default
 
         // exploding battleship
-        explodingShipShader.use();
-        model = glm::mat4(1);
-        model = glm::translate(model, programState->explosionPosition);
-        model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0, 1.0, 0.0));
-        model = glm::scale(model, glm::vec3(programState->shipScale));
-        explodingShipShader.setMat4("model", model);
-        view = programState->camera.GetViewMatrix();
-        explodingShipShader.setMat4("view", view);
-        explodingShipShader.setMat4("projection", projection);
-        explodingShipShader.setFloat("time", std::max(counter / 1000.0f, time_cap));
-        explodingShipShader.setFloat("transparency", min(transparency_cap, 3.0f - 1.0f*counter/1000.0f));
-        explodingShipShader.setVec3("cameraPos", programState->camera.Position);
-        ship.Draw(explodingShipShader);
-
+        if (programState->counter <= 3000.0f) {
+            explodingShipShader.use();
+            explodingShipShader.setVec3("explosionLight.intensity", glm::vec3(explosion_light_intensity));
+            model = glm::mat4(1);
+            model = glm::translate(model, programState->explosionPosition - glm::vec3(0.0f, 0.0f, 0.2f));
+            model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0, 1.0, 0.0));
+            model = glm::scale(model, glm::vec3(programState->shipScale));
+            explodingShipShader.setMat4("model", model);
+            view = programState->camera.GetViewMatrix();
+            explodingShipShader.setMat4("view", view);
+            explodingShipShader.setMat4("projection", projection);
+            float time = (programState->counter < 400.0f) ? 0.0f : programState->counter / 1000.0f;
+            explodingShipShader.setFloat("time", time);
+            explodingShipShader.setFloat("transparency", 3.0f - 1.0f * programState->counter / 1000.0f);
+            explodingShipShader.setVec3("cameraPos", programState->camera.Position);
+            ship.Draw(explodingShipShader);
+        }
 
         // update counter and flags
-//        std::cout << counter << '\n';
+//        std::cout << programState->counter << '\n';
         // increment time counter
-        if (disappearing_delay > 0 && counter < 3000 && !programState->pause )
-            counter+=4;
-        // check if explosion is "finished"
-        if (disappearing_delay > 0 && counter >= 3000 && !programState->pause) {
-            time_cap = 3.0;
-            transparency_cap = -1.0;
-            disappearing_delay--;
+
+        if (delay_counter >= 0) {
+            delay_counter--;
+        } else {
+            if (programState->counter < 8000 && !programState->pause)
+                programState->counter += programState->counter <= 3000 ? 1.0f*programState->animation_speed : 5.0f*programState->animation_speed;
+            // check if ship has disappeared
+            // explosion "disappearance"
+            else if (programState->loop && !programState->pause)
+                programState->counter = 0;
+
         }
-        // explosion "disappearance"
-        if (disappearing_delay == 0 && counter > -4000 && !programState->pause) {
-            counter-=4;
-            if (counter < 0)
-                counter -= 8;
-        }
+
 
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
@@ -575,9 +610,10 @@ void DrawImGui(ProgramState *programState) {
 //        {
 //            &programState->camera.reset();
 //        }
-        ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 1.0);
-        ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 1.0);
-        ImGui::DragFloat("pointLight.quadratic", &programState->pointLight.quadratic, 0.05, 0.0, 1.0);
+        ImGui::DragFloat("Time", &programState->counter, 0.5, 0.0, 8000.0);
+        ImGui::DragInt("Animation speed", &programState->animation_speed, 0.5, 0.0, 20.0);
+        ImGui::Checkbox("Loop", &programState->loop);
+        ImGui::Checkbox("Pause", &programState->pause);
         ImGui::End();
     }
 
