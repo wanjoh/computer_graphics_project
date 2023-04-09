@@ -145,6 +145,7 @@ float skyboxVertices[] = {
 };
 
 float cubeVertices[] = {
+        // back face
         -0.5f, -0.5f, -0.5f,
         0.5f, -0.5f, -0.5f,
         0.5f,  0.5f, -0.5f,
@@ -152,20 +153,23 @@ float cubeVertices[] = {
         -0.5f,  0.5f, -0.5f,
         -0.5f, -0.5f, -0.5f,
 
+        // front face
         -0.5f, -0.5f,  0.5f,
+        0.5f,  0.5f,  0.5f,
         0.5f, -0.5f,  0.5f,
         0.5f,  0.5f,  0.5f,
-        0.5f,  0.5f,  0.5f,
-        -0.5f,  0.5f,  0.5f,
         -0.5f, -0.5f,  0.5f,
-
         -0.5f,  0.5f,  0.5f,
+
+        // left face
+        -0.5f,  0.5f,  0.5f,
+        -0.5f, -0.5f, -0.5f,
         -0.5f,  0.5f, -0.5f,
         -0.5f, -0.5f, -0.5f,
-        -0.5f, -0.5f, -0.5f,
-        -0.5f, -0.5f,  0.5f,
         -0.5f,  0.5f,  0.5f,
+        -0.5f, -0.5f,  0.5f,
 
+        // right face
         0.5f,  0.5f,  0.5f,
         0.5f,  0.5f, -0.5f,
         0.5f, -0.5f, -0.5f,
@@ -173,13 +177,15 @@ float cubeVertices[] = {
         0.5f, -0.5f,  0.5f,
         0.5f,  0.5f,  0.5f,
 
+        // bottom face
         -0.5f, -0.5f, -0.5f,
+        0.5f, -0.5f,  0.5f,
         0.5f, -0.5f, -0.5f,
         0.5f, -0.5f,  0.5f,
-        0.5f, -0.5f,  0.5f,
-        -0.5f, -0.5f,  0.5f,
         -0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f,  0.5f,
 
+        // top face
         -0.5f,  0.5f, -0.5f,
         0.5f,  0.5f, -0.5f,
         0.5f,  0.5f,  0.5f,
@@ -370,25 +376,15 @@ int main() {
         glm::mat4 view = programState->camera.GetViewMatrix();
 
 
-        glDisable(GL_CULL_FACE);
-
-        // explosion ball
-        explosionBallShader.use();
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, programState->explosionPosition);
-        model = glm::scale(model, glm::vec3(0.4 + 0.0001 * counter));
-        explosionBallShader.setMat4("model", model);
-        explosionBallShader.setMat4("projection", projection);
-        explosionBallShader.setMat4("view", view);
-        explosionBall.Draw(explosionBallShader);
 
         glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
 
         // attacking battleship #1
         shipShader.use();
         shipShader.setVec3("explosionLight.intensity",  glm::vec3(0.001*max(counter, 0.0f)));
 
-        model = glm::mat4(1.0f);
+        glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model,programState->ship1Position);
         model = glm::rotate(model, glm::radians(20.0f), glm::vec3(0.0, 1.0, 0.0));
         model = glm::scale(model, glm::vec3(programState->shipScale));
@@ -417,7 +413,7 @@ int main() {
         objShader.setMat4("model", model);
         x.Draw(objShader);
         */
-        glDisable(GL_CULL_FACE);
+
 
         // bullets
         bulletShader.use();
@@ -434,7 +430,17 @@ int main() {
             bulletShader.setMat4("model", model);
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
+        glDisable(GL_CULL_FACE);
 
+        // explosion ball
+        explosionBallShader.use();
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, programState->explosionPosition);
+        model = glm::scale(model, glm::vec3(0.4 + 0.0001 * counter));
+        explosionBallShader.setMat4("model", model);
+        explosionBallShader.setMat4("projection", projection);
+        explosionBallShader.setMat4("view", view);
+        explosionBall.Draw(explosionBallShader);
 
         // draw skybox as last
         glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
@@ -470,7 +476,7 @@ int main() {
 //        std::cout << counter << '\n';
         // increment time counter
         if (disappearing_delay > 0 && counter < 3000 && !programState->pause )
-            counter++;
+            counter+=4;
         // check if explosion is "finished"
         if (disappearing_delay > 0 && counter >= 3000 && !programState->pause) {
             time_cap = 3.0;
@@ -479,9 +485,9 @@ int main() {
         }
         // explosion "disappearance"
         if (disappearing_delay == 0 && counter > -4000 && !programState->pause) {
-            counter--;
+            counter-=4;
             if (counter < 0)
-                counter -= 3;
+                counter -= 8;
         }
 
         if (programState->ImGuiEnabled)
