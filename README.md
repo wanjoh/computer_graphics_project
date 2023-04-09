@@ -1,6 +1,15 @@
-# Link to youtube demo
+# Short demo
+
+
+https://user-images.githubusercontent.com/45543803/230735228-de506a99-a456-4bd7-bb8b-d89de86047c2.mp4
+
+
 
 # How to run
+
+```WASD``` - movement
+
+```P``` - pause animation
 
 # Implemented checklist
 - [x] Shaders
@@ -10,7 +19,7 @@
 - [x] Advanced lighting
 - [x] Multiple lights
 - [x] Model loading
-- [ ] Blending
+- [x] Blending
 - [x] Face culling
 - [x] Imgui
 - [x] Geometry shader
