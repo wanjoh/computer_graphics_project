@@ -44,12 +44,9 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec3 light_contribu
 
 void main()
 {
-    vec4 texColor = texture(material.texture_specular1, TexCoords);
-    if (texColor.a < 0.1)
-        discard;
     vec3 normal = normalize(Normal);
     vec3 viewDir = normalize(viewPosition - FragPos);
-    vec3 result = CalcDirLight(dirLight, normal, viewDir, vec3(0.2, 0.1, 0.1));
+    vec3 result = 2*CalcDirLight(dirLight, normal, viewDir, vec3(0.2, 0.1, 0.1));
     result += CalcPointLight(explosionLight, normal, FragPos, viewDir);
     FragColor = vec4(result, 1.0);
 }

@@ -5,11 +5,13 @@ layout (triangle_strip, max_vertices = 3) out;
 in VS_OUT {
     vec2 texCoords;
     vec3 aPos;
+    vec3 Normal1;
+    vec3 FragPos1;
 } gs_in[];
 
 out vec2 TexCoords;
-out vec3 aPos1;
-
+out vec3 Normal;
+out vec3 FragPos;
 uniform float time;
 
 vec4 explode(vec4 position, vec3 normal)
@@ -29,19 +31,22 @@ vec3 GetNormal()
 void main() {
     vec3 normal = GetNormal();
 
-    aPos1 = vec3(gs_in[0].aPos);
     gl_Position = explode(gl_in[0].gl_Position, normal);
     TexCoords = gs_in[0].texCoords;
+    Normal = gs_in[0].Normal1;
+    FragPos = gs_in[0].FragPos1;
     EmitVertex();
 
     gl_Position = explode(gl_in[1].gl_Position, normal);
     TexCoords = gs_in[2].texCoords;
-    aPos1 = vec3(gs_in[0].aPos);
+    Normal = gs_in[1].Normal1;
+    FragPos = gs_in[1].FragPos1;
     EmitVertex();
 
-    aPos1 = vec3(gs_in[2].aPos);
     gl_Position = explode(gl_in[2].gl_Position, normal);
     TexCoords = gs_in[2].texCoords;
+    Normal = gs_in[2].Normal1;
+    FragPos = gs_in[2].FragPos1;
     EmitVertex();
     EndPrimitive();
 }
