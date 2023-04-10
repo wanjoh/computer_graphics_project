@@ -8,7 +8,7 @@ https://user-images.githubusercontent.com/45543803/230793929-446ad235-ef86-4529-
 
 
 
-# How to run
+# Manual
 
 ```WASD``` - movement
 
