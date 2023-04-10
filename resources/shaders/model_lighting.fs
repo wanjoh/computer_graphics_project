@@ -16,6 +16,7 @@ struct PointLight {
 
 struct DirLight {
     vec3 direction;
+    vec3 intensity;
 
     vec3 ambient;
     vec3 diffuse;
@@ -40,18 +41,18 @@ uniform Material material;
 uniform vec3 viewPosition;
 
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
-vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec3 light_contribution);
+vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
 
 void main()
 {
     vec3 normal = normalize(Normal);
     vec3 viewDir = normalize(viewPosition - FragPos);
-    vec3 result = 2*CalcDirLight(dirLight, normal, viewDir, vec3(0.2, 0.1, 0.1));
+    vec3 result = 2*CalcDirLight(dirLight, normal, viewDir);
     result += CalcPointLight(explosionLight, normal, FragPos, viewDir);
     FragColor = vec4(result, 1.0);
 }
 
-vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec3 light_contribution)
+vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
 {
     vec3 lightDir = normalize(-light.direction);
     // diffuse shading
@@ -63,7 +64,7 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec3 light_contribu
     vec3 ambient = light.ambient * vec3(texture(material.texture_diffuse1, TexCoords));
     vec3 diffuse = light.diffuse * diff * vec3(texture(material.texture_diffuse1, TexCoords));
     vec3 specular = light.specular * spec * vec3(texture(material.texture_specular1, TexCoords));
-    return (ambient*light_contribution.x + diffuse*light_contribution.y + specular*light_contribution.z);
+    return (ambient*light.intensity.x + diffuse*light.intensity.y + specular*light.intensity.z);
 }
 
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
