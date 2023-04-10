@@ -14,6 +14,14 @@ https://user-images.githubusercontent.com/45543803/230793929-446ad235-ef86-4529-
 
 ```P``` - pause animation
 
+```H``` - toggle HDR
+
+```L``` - toggle loop
+
+```R``` - reset animation
+
+```F1``` - ImGui
+
 # Implemented checklist
 - [x] Shaders
 - [x] Textures
@@ -35,7 +43,7 @@ https://user-images.githubusercontent.com/45543803/230793929-446ad235-ef86-4529-
 ### B
 - [ ] Point shadows
 - [ ] Normal mapping, Parallax mapping
-- [ ] HDR, Bloom
+- [x] HDR
 - [ ] Deffered Shading
 - [ ] SSAO
 
