@@ -29,6 +29,7 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 unsigned int loadCubemap(vector<std::string> faces);
 
 void renderQuad();
+
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
@@ -119,7 +120,6 @@ ProgramState *programState;
 void DrawImGui(ProgramState *programState);
 
 float skyboxVertices[] = {
-        // positions
         -1.0f,  1.0f, -1.0f,
         -1.0f, -1.0f, -1.0f,
         1.0f, -1.0f, -1.0f,
@@ -213,7 +213,6 @@ float cubeVertices[] = {
         -0.5f,  0.5f, -0.5f
 };
 
-// TODO: multiple ships; bloom
 int main() {
     // glfw: initialize and configure
     // ------------------------------
@@ -228,7 +227,7 @@ int main() {
 
     // glfw window creation
     // --------------------
-    GLFWwindow *window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "spaceship ", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "spaceship shootout", NULL, NULL);
     if (window == NULL) {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
@@ -287,7 +286,6 @@ int main() {
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
-
     // skybox VAO
     unsigned int skyboxVAO, skyboxVBO;
     glGenVertexArrays(1, &skyboxVAO);
@@ -309,15 +307,14 @@ int main() {
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    // load textures
+    // load skybox textures
     vector<std::string> faces {
             FileSystem::getPath("resources/textures/skybox/front.png"),
             FileSystem::getPath("resources/textures/skybox/back.png"),
             FileSystem::getPath("resources/textures/skybox/top.png"),
             FileSystem::getPath("resources/textures/skybox/bottom.png"),
             FileSystem::getPath("resources/textures/skybox/right.png"),
-            FileSystem::getPath("resources/textures/skybox/left.png"),
-
+            FileSystem::getPath("resources/textures/skybox/left.png")
     };
     unsigned int cubemapTexture = loadCubemap(faces);
 
@@ -330,6 +327,8 @@ int main() {
     Shader bulletShader("resources/shaders/bullet.vs", "resources/shaders/bullet.fs");
     Shader hdrShader("resources/shaders/hdr.vs", "resources/shaders/hdr.fs");
 
+    // setting up HDR
+    // --------------------------
     // floating point framebuffer
     unsigned int hdrFBO;
     glGenFramebuffers(1, &hdrFBO);
@@ -365,6 +364,8 @@ int main() {
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     // shader configuration
+    // -------------------------
+    // skybox
     skyboxShader.use();
     skyboxShader.setInt("skybox", 0);
 
@@ -406,9 +407,8 @@ int main() {
     hdrShader.use();
     hdrShader.setInt("hdrBuffer", 0);
 
-    // render loop
-    // -----------
-    // time counter; 0 - 3000 - explosion grows; >3000 explosion shrinks
+
+    // time counter; 0 - 3000 -> explosion grows; >3000 -> explosion shrinks
     programState->counter = 0.0f;
     // delay before the animation starts
     int delay_counter = 100;
@@ -421,6 +421,8 @@ int main() {
 
     int current_fb;
 
+    // render loop
+    // -----------
     while (!glfwWindowShouldClose(window)) {
         // per-frame time logic
         // --------------------
@@ -515,7 +517,8 @@ int main() {
         glBindVertexArray(VAO);
 
         for (int i = 0; i < programState->bulletCount; i++) {
-            glm::vec3 bulletPos = initialBulletPositions[i] + (programState->explosionPosition-initialBulletPositions[i])*programState->counter/500.0f;
+            glm::vec3 bulletPos = initialBulletPositions[i] +
+                    (programState->explosionPosition - initialBulletPositions[i])*programState->counter/500.0f;
             if (bulletPos.z >= programState->explosionPosition.z - 0.5f || bulletPos.z <= programState->ship2Position.z)
                 continue;
             model = glm::mat4(1);
@@ -551,8 +554,6 @@ int main() {
             if (programState->counter < 400) {
                 shipShader.use();
                 shipShader.setMat4("model", model);
-//                shipShader.setMat4("view", view);
-//                shipShader.setMat4("projection", projection);
                 ship.Draw(shipShader);
             } else{
                 explodingShipShader.use();
@@ -572,7 +573,7 @@ int main() {
             }
         }
 
-        // render floating point color buffer if hdr is enabled
+        // render floating point color buffer to 2D quad and tone-map HDR colors to default frame buffer's (clamped) color range
 
         if (current_fb == (int)hdrFBO) {
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -584,9 +585,7 @@ int main() {
             renderQuad();
         }
 
-//        std::cout << programState->counter << '\n';
-
-        if (delay_counter >= 0) {
+        if (delay_counter >= 0 && !programState->pause) {
             delay_counter--;
         } else {
             // increment counter if animation is not finished yet
@@ -680,17 +679,20 @@ void DrawImGui(ProgramState *programState) {
 
     {
         ImGui::Begin("Animation settings");
-        ImGui::DragFloat("Time", &programState->counter, 1.0, 0.0, 8000.0);
+        ImGui::DragFloat("Time", &programState->counter, 5.0, 0.0, 8000.0);
         ImGui::DragFloat("Animation speed", &programState->animation_speed, 0.3, 0.0, 20.0);
         ImGui::DragFloat("HDR exposure parameter", &programState->exposure, 0.1, 0.0, 10.0);
         ImGui::Checkbox("Loop", &programState->loop);
         ImGui::Checkbox("Pause", &programState->pause);
         ImGui::Checkbox("HDR", &programState->hdr);
-        ImGui::Text("DirLight settings:");
         if (ImGui::Button("Reset time")) {
             programState->counter = 0;
         }
-//        ImGui::DragFloat("Ambient", &programState->dirLightIntensity.x, 0.05, 0.0, 3.0);
+        // uncomment for testing
+//        ImGui::Text("DirLight settings:");
+//        ImGui::DragFloat("Ambient", &programState->dirLightIntensity.x, 0.05, 0.0, 5.0);
+//        ImGui::DragFloat("Diffuse", &programState->dirLightIntensity.y, 0.05, 0.0, 5.0);
+//        ImGui::DragFloat("Specular", &programState->dirLightIntensity.z, 0.05, 0.0, 5.0);
         ImGui::End();
     }
 
